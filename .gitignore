@@ -50,3 +50,6 @@ env.json
 *.pfx
 *.p12
 certificados/
+
+# Capturas generadas a demanda con `flutter test --tags capturas`.
+/capturas/

@@ -639,7 +639,7 @@ class _SeccionCondiciones extends StatelessWidget {
                       DropdownMenuItem(
                         value: moneda,
                         child: Text(
-                          '${moneda.simbolo}  ${moneda.etiqueta}',
+                          '${moneda.simbolo} ${moneda.etiqueta}',
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

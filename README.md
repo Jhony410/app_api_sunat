@@ -68,7 +68,7 @@ guarda en la base local. **Ni tokens ni URLs se escriben nunca en el código.**
 dart run build_runner build     # tras tocar entidades @freezed, providers @riverpod o tablas Drift
 dart run build_runner watch     # regeneración continua
 flutter analyze                 # debe terminar sin issues
-flutter test                    # pruebas del motor de cálculo fiscal
+flutter test                    # cálculo fiscal, formatos y recorridos de pantalla
 ```
 
 Un solo caso por nombre:
@@ -76,6 +76,22 @@ Un solo caso por nombre:
 ```bash
 flutter test test/calculadora_totales_test.dart --plain-name "IGV"
 ```
+
+### Pruebas
+
+Las de pantalla montan la **app entera** —router, tema y providers incluidos— contra una base de
+datos en memoria (`AppDatabase.paraPruebas`), de modo que cubren también el cableado, que es donde
+se esconde lo que `flutter analyze` no ve: que emitir reserve el correlativo, que el receptor se
+copie en el comprobante, o que guardar dos ajustes seguidos no pierda el segundo.
+
+Para mirar la interfaz sin un dispositivo delante se pueden renderizar las pantallas y el RIDE:
+
+```bash
+flutter test --update-goldens test/capturas/generar_capturas.dart
+```
+
+Deja los PNG y el PDF en `capturas/` (ignorada por git). No forma parte de `flutter test`: el
+resultado depende de la máquina que lo renderiza.
 
 ## Arquitectura
 
