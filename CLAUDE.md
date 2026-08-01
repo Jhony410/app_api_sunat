@@ -9,10 +9,15 @@ siguiendo UBL 2.1, consulta RUC/DNI, y exporta cada comprobante como RIDE en PDF
 
 Se construye en tres fases, y cada una debe compilar y correr antes de pasar a la siguiente:
 
-1. **MVP en modo Simulación** — todo local, sin backend. Es el modo por defecto de la app.
+1. **MVP en modo Simulación** — todo local, sin backend. Es el modo por defecto de la app. **Completa.**
 2. **Consulta RUC/DNI** — contra una API pública, detrás de una interfaz para poder cambiar de proveedor.
 3. **Emisión real** — contra el ambiente BETA de SUNAT a través de [Lycet](https://github.com/giansalex/lycet)
    (API REST sobre Greenter). La firma XML-DSig y el cliente SOAP **no** se reimplementan en Dart.
+
+Los puntos de enganche de las fases siguientes ya están puestos y vacíos: `FormularioCliente`
+acepta un `accionConsulta` y `CamposIdentificacionEmpresa` un `accionConsultaRuc` para el botón de
+la Fase 2; `PasarelaSunat` es la interfaz que implementará el cliente de Lycet en la Fase 3, y
+`servicioEmisionProvider` es donde se inyectará. Nada de eso debe obligar a tocar la interfaz.
 
 ## Idioma
 
@@ -42,6 +47,12 @@ Un solo archivo de test, o un solo caso por nombre:
 
 ```bash
 flutter test test/calculadora_totales_test.dart --plain-name "IGV"
+```
+
+Regenerar las capturas que ilustran el README (no entran en `flutter test`):
+
+```bash
+flutter test --update-goldens test/capturas/generar_capturas.dart
 ```
 
 Regeneración continua mientras se editan modelos o tablas:
@@ -80,6 +91,27 @@ no lo use, o el generado no compila.
   expone `.value` (que devuelve `T?`); `valueOrNull` ya no existe.
 - **Tipografías** — van empaquetadas en `assets/fonts/` en lugar de `google_fonts`, porque la app
   debe verse igual sin conexión y el generador de PDF necesita el TTF para incrustarlo en el RIDE.
+- **`barcode`** — `BarcodeQRCorrectionLevel` vive ahí; `pdf/widgets.dart` lo usa pero no lo
+  reexporta, así que hay que importarlo a mano en el generador del RIDE.
+
+## Trampas que ya costaron una sesión
+
+**`intl` no tiene datos numéricos de `es_PE`** y degrada en silencio a los de España: coma decimal,
+punto de millares y símbolo detrás (`1.234,50 S/`). Perú escribe `S/ 1,234.50`. Por eso
+`core/utils/formatos.dart` toma los separadores de `en_US` —que coinciden con la convención
+peruana— y antepone el símbolo a mano. **No pasar `kLocalePeru` a un `NumberFormat`**: esa
+constante sólo vale para fechas, cuyos patrones son explícitos. Lo que viaja al XML no se ve
+afectado porque `importeParaSunat` usa `toStringAsFixed`, que ignora la configuración regional.
+
+**Un provider `autoDispose` leído con `ref.read` desde un widget no tiene oyentes**, así que
+Riverpod lo destruye enseguida. Si su método sigue usando `ref` después de un `await` —generar el
+PDF, hablar con la pasarela, escribir la segunda de dos claves— revienta a mitad de la operación.
+Los controladores de pantalla (`ControladorRide`, `ControladorEmision`, `ControladorAjustes`) se
+**observan** con `ref.watch(...notifier)` desde el `build` de la pantalla que los usa, no se leen.
+
+**`PopScope` con `canPop: false`**: dentro de `onPopInvokedWithResult` hay que salir con
+`context.pop()` (que llama a `Navigator.pop`), nunca con `maybePop`, o el `PopScope` se dispara
+otra vez y el diálogo de descarte entra en bucle.
 
 ## Arquitectura
 
@@ -90,12 +122,17 @@ tiene `data/`, `domain/` y `presentation/`.
 lib/
   core/          constantes (catálogos SUNAT), database, router, theme, utils, widgets, providers
   features/
-    empresa/       datos del emisor (registro único) y onboarding
+    empresa/       datos del emisor (registro único), onboarding y su edición posterior
     clientes/      agenda de receptores
     comprobantes/  cálculo fiscal, persistencia, RIDE en PDF, emisión
     configuracion/ ajustes clave/valor (modo de operación, Lycet, tema)
     inicio/        dashboard y cáscara de navegación
 ```
+
+Las pantallas de `comprobantes/presentation/`: `pantalla_historial`, `pantalla_nuevo_comprobante`
+(formulario de emisión) y `pantalla_detalle_comprobante` (con la pestaña del RIDE). Los widgets que
+comparten son `panel_totales` —el desglose, que sirve igual al borrador y al comprobante emitido—,
+`tabla_items` y `hoja_item_comprobante`, la hoja inferior de captura de línea.
 
 ### Reglas que sostienen el dominio
 
@@ -134,7 +171,24 @@ que se descarten al salir (el borrador del comprobante depende de eso).
 
 `go_router` con un `ShellRoute` para las cuatro secciones con barra inferior. El `redirect` fuerza el
 onboarding mientras `requiereConfiguracionInicialProvider` sea `true`, y un `refreshListenable` puente
-sobre Riverpod lo reevalúa en cuanto la empresa queda configurada.
+sobre Riverpod lo reevalúa en cuanto la empresa queda configurada. Las pantallas de trabajo —nuevo
+comprobante, detalle, ficha de cliente, datos de la empresa— se apilan sobre el navegador **raíz**
+(`parentNavigatorKey`) para que tapen la barra inferior en vez de vivir dentro de una sección.
+
+`main.dart` monta el `ProviderScope`, el router, el tema y las traducciones de Material en es-PE, y
+llama a `initializeDateFormatting` **antes** del primer `DateFormat`, o `intl` lanza al formatear.
+
+## Pruebas
+
+`test/utiles/entorno_prueba.dart` monta la **app entera** —router, tema y providers— contra una
+base en memoria (`AppDatabase.paraPruebas` + `NativeDatabase.memory()`), sobrescribiendo sólo
+`appDatabaseProvider`. Se prueba así, y no el widget suelto, porque los fallos que importan están
+en el cableado: que el correlativo no se repita, que el receptor quede copiado en el comprobante,
+que guardar dos ajustes seguidos no pierda el segundo.
+
+Dos detalles del arnés: el lienzo por defecto (800 × 600) deja fuera media pantalla, así que
+`montar()` lo agranda; y las capturas cargan a mano las tipografías del proyecto y la de íconos,
+porque el motor de pruebas usa por defecto una fuente de rectángulos.
 
 ## Sistema de diseño
 
@@ -155,3 +209,7 @@ y el usuario puede sobrescribirlos desde Configuración, que los guarda en la ta
 
 `docs/ejemplo_ubl_boleta.xml` es un XML real de una boleta firmada. Es la referencia de estructura para
 los nombres de campo, los códigos de catálogo y el formato de importes al construir el envío de Fase 3.
+
+`docs/capturas/` son las imágenes del README, generadas por `test/capturas/generar_capturas.dart`.
+Hay que regenerarlas cuando cambie la interfaz; el `ride.pdf` de esa carpeta es la salida real del
+generador y sirve para comprobar de un vistazo si algo se rompió en el RIDE.

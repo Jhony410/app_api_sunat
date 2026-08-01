@@ -13,22 +13,22 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../utiles/entorno_prueba.dart';
 
-/// Genera capturas de las pantallas y el RIDE en `capturas/`.
+/// Genera las capturas de `docs/capturas/`, que son las que ilustran el README.
 ///
 /// No es una prueba de regresión: es la forma de mirar la interfaz cuando no
 /// hay dispositivo a mano. El nombre del archivo no acaba en `_test.dart`
-/// justamente para que `flutter test` no lo recoja —las capturas dependen de
-/// la máquina que las renderiza—; se ejecuta a mano con:
+/// justamente para que `flutter test` no lo recoja —el resultado depende de la
+/// máquina que renderiza—; se regenera a mano cuando cambie la interfaz:
 ///
 /// ```bash
 /// flutter test --update-goldens test/capturas/generar_capturas.dart
 /// ```
 ///
 /// A diferencia del resto de pruebas, aquí sí se cargan las tipografías reales
-/// del proyecto: el motor de pruebas usa por defecto una fuente de rectángulos
-/// y las capturas saldrían ilegibles.
+/// del proyecto y la de íconos: el motor de pruebas usa por defecto una fuente
+/// de rectángulos y las capturas saldrían ilegibles.
 void main() {
-  const carpeta = 'capturas';
+  const carpeta = 'docs/capturas';
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -123,33 +123,71 @@ void main() {
     await capturar(tester, '1-inicio');
   });
 
-  testWidgets('nuevo comprobante', (tester) async {
+  testWidgets('nuevo comprobante, vacío', (tester) async {
     await entorno.guardarCliente(clienteConRuc);
     await entorno.montar(tester, tamano: const Size(430, 1400));
     await entorno.irA(tester, Rutas.nuevoComprobante);
     await capturar(tester, '2-nuevo-comprobante-vacio');
   });
 
+  testWidgets('hoja de ítem y comprobante con líneas', (tester) async {
+    await entorno.guardarCliente(clienteConRuc);
+    await entorno.montar(tester, tamano: const Size(430, 1500));
+    await entorno.irA(tester, Rutas.nuevoComprobante);
+
+    await tester.tap(find.text('Buscar en la agenda'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('CLIENTE DEMO S.A.C.'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Agregar el primero'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Descripción'),
+      'Servicio de consultoría tributaria',
+    );
+    await tester.enterText(find.widgetWithText(TextField, 'Cantidad'), '2');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Valor unitario (sin IGV)'),
+      '250',
+    );
+    await tester.pumpAndSettle();
+
+    // La hoja con el desglose de la línea recalculado al vuelo.
+    await capturar(tester, '3-hoja-item');
+
+    await tester.tap(find.text('Agregar al comprobante'));
+    await tester.pumpAndSettle();
+    await capturar(tester, '4-nuevo-comprobante-con-items');
+  });
+
   testWidgets('detalle del comprobante', (tester) async {
     final comprobante = await emitirDePrueba();
     await entorno.montar(tester, tamano: const Size(430, 1600));
     await entorno.irA(tester, Rutas.detalleDe(comprobante.id!));
-    await capturar(tester, '3-detalle-comprobante');
+    await capturar(tester, '5-detalle-comprobante');
   });
 
   testWidgets('historial', (tester) async {
     await emitirDePrueba();
     await entorno.montar(tester, tamano: const Size(430, 932));
     await entorno.irA(tester, Rutas.historial);
-    await capturar(tester, '4-historial');
+    await capturar(tester, '6-historial');
   });
 
   testWidgets('configuración', (tester) async {
     await entorno.montar(tester, tamano: const Size(430, 1400));
     await entorno.irA(tester, Rutas.configuracion);
-    await capturar(tester, '5-configuracion');
+    await capturar(tester, '7-configuracion');
   });
 
+  /// El PDF se deja tal cual. La miniatura que enseña el README se saca
+  /// aparte, porque rasterizar necesita pdfium y en un test no hay motor:
+  ///
+  /// ```bash
+  /// python3 -c "import fitz; fitz.open('docs/capturas/ride.pdf')[0] \
+  ///   .get_pixmap(dpi=110).save('docs/capturas/8-ride.png')"
+  /// ```
   testWidgets('RIDE en PDF', (tester) async {
     final comprobante = await emitirDePrueba();
     final completo = await entorno.contenedor
