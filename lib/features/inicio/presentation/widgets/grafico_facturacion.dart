@@ -136,9 +136,14 @@ class _Barras extends StatelessWidget {
                   return const SizedBox.shrink();
                 }
                 // Sólo se rotula uno de cada tres días y el último, para no
-                // amontonar etiquetas en pantallas estrechas.
-                final esUltimo = indice == serie.length - 1;
-                if (!esUltimo && indice % 3 != 0) return const SizedBox.shrink();
+                // amontonar etiquetas en pantallas estrechas. El periódico que
+                // caiga pegado al último se omite: si no, ambas fechas se
+                // solapan en el borde derecho.
+                final ultimo = serie.length - 1;
+                final esUltimo = indice == ultimo;
+                if (!esUltimo && (indice % 3 != 0 || ultimo - indice < 3)) {
+                  return const SizedBox.shrink();
+                }
                 return Padding(
                   padding: const EdgeInsets.only(top: Espaciado.xxs),
                   child: Text(

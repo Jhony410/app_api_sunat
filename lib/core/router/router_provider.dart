@@ -8,6 +8,7 @@ import '../../features/comprobantes/presentation/pantallas/pantalla_detalle_comp
 import '../../features/comprobantes/presentation/pantallas/pantalla_historial.dart';
 import '../../features/comprobantes/presentation/pantallas/pantalla_nuevo_comprobante.dart';
 import '../../features/configuracion/presentation/pantallas/pantalla_configuracion.dart';
+import '../../features/empresa/presentation/pantallas/pantalla_datos_empresa.dart';
 import '../../features/empresa/presentation/pantallas/pantalla_onboarding.dart';
 import '../../features/empresa/presentation/providers/empresa_providers.dart';
 import '../../features/inicio/presentation/pantallas/cascaron_navegacion.dart';
@@ -73,6 +74,16 @@ GoRouter router(Ref ref) {
             name: NombresRuta.configuracion,
             pageBuilder: (context, estado) =>
                 const NoTransitionPage(child: PantallaConfiguracion()),
+            routes: [
+              // Se apila sobre el navegador raíz para que tape la barra
+              // inferior: es una pantalla de trabajo, no una sección.
+              GoRoute(
+                path: 'empresa',
+                name: NombresRuta.datosEmpresa,
+                parentNavigatorKey: _claveNavegadorRaiz,
+                builder: (context, estado) => const PantallaDatosEmpresa(),
+              ),
+            ],
           ),
         ],
       ),

@@ -14,6 +14,9 @@ abstract final class Rutas {
   static const editarCliente = '/clientes/:id';
   static const consultaDocumento = '/consulta';
 
+  /// Edición del emisor desde Configuración (el onboarding usa su propia ruta).
+  static const datosEmpresa = '/configuracion/empresa';
+
   static String detalleDe(int id) => '/comprobantes/$id';
   static String editarClienteDe(int id) => '/clientes/$id';
 }
@@ -30,4 +33,5 @@ abstract final class NombresRuta {
   static const nuevoCliente = 'nuevoCliente';
   static const editarCliente = 'editarCliente';
   static const consultaDocumento = 'consultaDocumento';
+  static const datosEmpresa = 'datosEmpresa';
 }

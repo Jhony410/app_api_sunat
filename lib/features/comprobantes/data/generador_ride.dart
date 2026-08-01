@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+// El nivel de corrección del QR vive en `barcode`, que `pdf/widgets.dart` usa
+// pero no reexporta.
+import 'package:barcode/barcode.dart' show BarcodeQRCorrectionLevel;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;

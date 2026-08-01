@@ -11,6 +11,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Traducciones de Material para los selectores de fecha en es-PE.
+  flutter_localizations:
+    sdk: flutter
+
   cupertino_icons: ^1.0.8
 
   # Estado
