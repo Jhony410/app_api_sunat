@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Configuración sensible: valores por defecto de --dart-define-from-file.
+# Sólo se versiona la plantilla `env.example.json`.
+env.json
+*.pfx
+*.p12
+certificados/
