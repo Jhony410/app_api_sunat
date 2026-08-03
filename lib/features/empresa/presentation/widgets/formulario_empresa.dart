@@ -25,7 +25,9 @@ class CamposIdentificacionEmpresa extends StatelessWidget {
           name: 'ruc',
           decoration: InputDecoration(
             labelText: 'RUC',
-            hintText: '20123456789',
+            // El ejemplo tiene que superar el módulo 11: si el usuario lo copia
+            // tal cual, el campo no puede rechazárselo.
+            hintText: '20123456786',
             prefixIcon: const Icon(Icons.badge_outlined),
             suffixIcon: accionConsultaRuc,
             counterText: '',
